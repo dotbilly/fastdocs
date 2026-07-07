@@ -139,7 +139,8 @@ export async function serve(docsPath = '.', options = {}) {
     
     if (vitepress.stdout) {
       vitepress.stdout.on('data', (data) => {
-        const output = data.toString()
+        // Strip ANSI color codes so URL/readiness detection works reliably
+        const output = data.toString().replace(/\x1b\[[0-9;]*m/g, '')
         
         // Extract URLs from VitePress output
         const localMatch = output.match(/Local:\s+(http:\/\/[^\s]+)/)
