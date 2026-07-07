@@ -120,10 +120,12 @@ export async function build(inputPath = '.', outputPath = './dist', options = {}
   try {
     // Install dependencies
     process.stdout.write(pc.dim('⚙  Setting up...'))
+    const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm'
     await new Promise((resolve, reject) => {
-      const npm = spawn('npm', ['install'], {
+      const npm = spawn(`${npmCmd} install`, {
         cwd: tempDir,
-        stdio: 'pipe'
+        stdio: 'pipe',
+        shell: true
       })
       
       npm.on('close', (code) => {
@@ -136,9 +138,9 @@ export async function build(inputPath = '.', outputPath = './dist', options = {}
     // Run VitePress build
     process.stdout.write(pc.dim('🔨 Building...'))
     
-    const vitepressBin = resolve(tempDir, 'node_modules/.bin/vitepress')
+    const vitepressBin = resolve(tempDir, 'node_modules/vitepress/bin/vitepress.js')
     await new Promise((resolve, reject) => {
-      const vitepress = spawn(vitepressBin, ['build'], {
+      const vitepress = spawn(process.execPath, [vitepressBin, 'build'], {
         cwd: tempDir,
         stdio: 'pipe' // Suppress VitePress output
       })

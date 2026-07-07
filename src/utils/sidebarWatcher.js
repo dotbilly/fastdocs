@@ -1,7 +1,7 @@
 import { watch } from 'chokidar'
 import { writeFileSync, cpSync, rmSync, mkdirSync, existsSync, unlinkSync } from 'fs'
 import { join, dirname, relative } from 'path'
-import { fileURLToPath } from 'url'
+import { fileURLToPath, pathToFileURL } from 'url'
 import { loadConfig } from '../cli/config.js'
 import { generateVitePressConfig } from '../vitepress/configGenerator.js'
 import pc from 'picocolors'
@@ -95,7 +95,8 @@ export function watchSidebarChanges(docsPath, tempDir, onRestart) {
       
       // Write updated config (pointing to tempDir)
       const configPath = join(tempDir, '.vitepress/config.mjs')
-      const configContent = `import { generateVitePressConfig } from '${join(__dirname, '../vitepress/configGenerator.js').replace(/\\/g, '\\\\')}'
+      const configGeneratorUrl = pathToFileURL(join(__dirname, '../vitepress/configGenerator.js')).href
+      const configContent = `import { generateVitePressConfig } from '${configGeneratorUrl}'
 
 const userConfig = ${JSON.stringify(config, null, 2)}
 const docsPath = '${tempDir.replace(/\\/g, '\\\\')}'

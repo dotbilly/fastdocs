@@ -47,10 +47,12 @@ export async function serve(docsPath = '.', options = {}) {
   
   // Install dependencies in temp directory
   process.stdout.write(pc.dim('⚙  Setting up...'))
+  const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm'
   await new Promise((resolve, reject) => {
-    const npm = spawn('npm', ['install'], {
+    const npm = spawn(`${npmCmd} install`, {
       cwd: tempDir,
-      stdio: 'pipe'  // Hide npm output
+      stdio: 'pipe',  // Hide npm output
+      shell: true
     })
     
     npm.on('close', (code) => {
@@ -63,7 +65,7 @@ export async function serve(docsPath = '.', options = {}) {
   process.stdout.write(pc.dim('🚀 Starting server...'))
   
   // Start VitePress dev server using local binary
-  const vitepressBin = resolve(tempDir, 'node_modules/.bin/vitepress')
+  const vitepressBin = resolve(tempDir, 'node_modules/vitepress/bin/vitepress.js')
   const vitepressArgs = ['dev']
   
   if (options.port) {
@@ -111,7 +113,7 @@ export async function serve(docsPath = '.', options = {}) {
   }
   
   const startVitePress = () => {
-    vitepress = spawn(vitepressBin, vitepressArgs, {
+    vitepress = spawn(process.execPath, [vitepressBin, ...vitepressArgs], {
       cwd: tempDir,
       stdio: ['inherit', 'pipe', 'pipe'] // stdin, stdout, stderr - pipe both to capture
     })

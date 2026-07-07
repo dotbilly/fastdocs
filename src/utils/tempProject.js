@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync, rmSync, cpSync, existsSync, readdirSync, stat
 import { tmpdir } from 'os'
 import { join } from 'path'
 import { randomBytes } from 'crypto'
-import { fileURLToPath } from 'url'
+import { fileURLToPath, pathToFileURL } from 'url'
 import { dirname } from 'path'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -93,8 +93,9 @@ export function createTempProject(docsPath, config) {
   cpSync(themeSrc, themeDst, { recursive: true })
   
   // Generate and write VitePress config (files are in tempDir, no srcDir)
+  const configGeneratorUrl = pathToFileURL(join(__dirname, '../vitepress/configGenerator.js')).href
   const configContent = `
-import { generateVitePressConfig } from '${join(__dirname, '../vitepress/configGenerator.js')}'
+import { generateVitePressConfig } from '${configGeneratorUrl}'
 
 const userConfig = ${JSON.stringify(config, null, 2)}
 const docsPath = '${tempDir.replace(/\\/g, '\\\\')}'
@@ -163,8 +164,9 @@ export function createTempProjectForBuild(docsPath, config) {
   cpSync(themeSrc, themeDst, { recursive: true })
   
   // Generate and write VitePress config (files are in tempDir, no srcDir)
+  const configGeneratorUrl = pathToFileURL(join(__dirname, '../vitepress/configGenerator.js')).href
   const configContent = `
-import { generateVitePressConfig } from '${join(__dirname, '../vitepress/configGenerator.js')}'
+import { generateVitePressConfig } from '${configGeneratorUrl}'
 
 const userConfig = ${JSON.stringify(config, null, 2)}
 const docsPath = '${tempDir.replace(/\\/g, '\\\\')}'
