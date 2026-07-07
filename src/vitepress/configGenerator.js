@@ -1,6 +1,47 @@
 import { generateSidebar } from './sidebarGenerator.js'
 
 /**
+ * Standard HTML tag names that are safe to pass through to the Vue compiler.
+ * Anything not in this set and not a PascalCase Vue component is treated as
+ * literal text (e.g. prose placeholders like `<your-repo>` or `<your feeds>`).
+ */
+const KNOWN_HTML_TAGS = new Set([
+  'a', 'abbr', 'address', 'area', 'article', 'aside', 'audio', 'b', 'base',
+  'bdi', 'bdo', 'blockquote', 'body', 'br', 'button', 'canvas', 'caption',
+  'cite', 'code', 'col', 'colgroup', 'data', 'datalist', 'dd', 'del', 'details',
+  'dfn', 'dialog', 'div', 'dl', 'dt', 'em', 'embed', 'fieldset', 'figcaption',
+  'figure', 'footer', 'form', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'head',
+  'header', 'hgroup', 'hr', 'html', 'i', 'iframe', 'img', 'input', 'ins', 'kbd',
+  'label', 'legend', 'li', 'link', 'main', 'map', 'mark', 'menu', 'meta',
+  'meter', 'nav', 'noscript', 'object', 'ol', 'optgroup', 'option', 'output',
+  'p', 'param', 'picture', 'pre', 'progress', 'q', 'rp', 'rt', 'ruby', 's',
+  'samp', 'script', 'section', 'select', 'slot', 'small', 'source', 'span',
+  'strong', 'style', 'sub', 'summary', 'sup', 'table', 'tbody', 'td', 'template',
+  'textarea', 'tfoot', 'th', 'thead', 'time', 'title', 'tr', 'track', 'u', 'ul',
+  'var', 'video', 'wbr', 'svg', 'path', 'circle', 'rect', 'line', 'polyline',
+  'polygon', 'g', 'defs', 'use', 'symbol', 'text'
+])
+
+/**
+ * Escape raw HTML fragments whose tag name is neither a known HTML element nor
+ * a Vue component (PascalCase). This prevents the VitePress Vue compiler from
+ * choking on prose that contains angle-bracket placeholders such as
+ * `<your feeds>` (which is valid Markdown but looks like an unclosed tag).
+ * @param {string} content - Raw HTML fragment emitted by markdown-it
+ * @returns {string} Fragment with unknown tags escaped to literal text
+ */
+function escapeUnknownTags(content) {
+  return content.replace(/<\/?([A-Za-z][A-Za-z0-9-]*)(\s[^<>]*?)?\/?>/g, (match, tagName) => {
+    // Vue components are PascalCase (contain an uppercase letter) -> keep as-is
+    if (/[A-Z]/.test(tagName)) return match
+    // Known standard HTML elements -> keep as-is
+    if (KNOWN_HTML_TAGS.has(tagName.toLowerCase())) return match
+    // Unknown tag -> render as literal text
+    return match.replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  })
+}
+
+/**
  * Generate head configuration for favicon and meta tags
  * @param {Object} userConfig - User configuration
  * @param {string} baseUrl - Base URL for the site
@@ -101,6 +142,19 @@ export function generateVitePressConfig(userConfig, docsPath, useSrcDir = true) 
     head: generateHeadConfig(userConfig, baseUrl),
     markdown: {
       config: (md) => {
+        // Escape raw inline/block HTML for unknown tags so that Markdown prose
+        // containing angle brackets (e.g. `<your feeds>`) doesn't break the
+        // VitePress Vue compiler while still allowing real components.
+        const defaultInline = md.renderer.rules.html_inline
+          || ((tokens, idx) => tokens[idx].content)
+        const defaultBlock = md.renderer.rules.html_block
+          || ((tokens, idx) => tokens[idx].content)
+
+        md.renderer.rules.html_inline = (tokens, idx, options, env, slf) =>
+          escapeUnknownTags(defaultInline(tokens, idx, options, env, slf))
+        md.renderer.rules.html_block = (tokens, idx, options, env, slf) =>
+          escapeUnknownTags(defaultBlock(tokens, idx, options, env, slf))
+
         // Custom Mermaid renderer that uses our wrapper component
         const fence = md.renderer.rules.fence.bind(md.renderer.rules)
         md.renderer.rules.fence = (tokens, idx, options, env, slf) => {
